@@ -53,42 +53,30 @@ class Indicator extends PanelMenu.Button {
 
         this.add_child(label)
 
+        let mode = 'disconnected'
 
         async function updateLabel(){
 
-            try {
-                const res = await fetch('https://iceportal.de/api1/rs/status', {
-                    headers: {
-                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                    'Accept-Encoding': 'gzip, deflate, br, zstd',
-                    'Accept-Language': 'en-GB,en;q=0.5',
-                    'Connection': 'keep-alive',
-                    'Host':' iceportal.de',
-                    'Priority': 'u=0, i',
-                    'Sec-Fetch-Dest': 'document',
-                    'Sec-Fetch-Mode': 'navigate',
-                    'Sec-Fetch-Site': 'none',
-                    'Sec-Fetch-User': '?1',
-                    'Upgrade-Insecure-Requests':  '1',
-                    'User-Agent':' Mozilla/5.0 (X11; Linux x86_64; rv:146.0) Gecko/20100101 Firefox/146.0'
-                    }
-                })
+            if(mode == 'ICE' || mode == 'disconnected'){
 
-                const data = await res.json()
+                const success = await updateICE()
 
-                const speed = data.speed
+                if(success)
+                    mode = 'ICE'
+                else
+                    mode = 'disconnected'
 
-                global_error = data
-
-                label.text = `${speed} km/h`
-                // error = 'All fine'
             }
-            catch(error) {
-                global_error = error.toString()
-                label.text = `${error}`
+
+            if(mode == 'RailJet' || mode == 'disconnected'){
+
+                const success = await updateRailjet()
+
+                if(success)
+                    mode = 'RailJet'
+                else
+                    mode = 'disconnected'
             }
-            
-          
 
             setTimeout(updateLabel, 1000)
         }
@@ -100,6 +88,61 @@ class Indicator extends PanelMenu.Button {
             Main.notify(_(`Error: ${global_error}`));
         });
         this.menu.addMenuItem(item);
+
+        async function updateICE() {
+
+            try {
+                const res = await fetch('https://iceportal.de/api1/rs/status', {
+                    headers: {
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                        'Accept-Encoding': 'gzip, deflate, br, zstd',
+                        'Accept-Language': 'en-GB,en;q=0.5',
+                        'Connection': 'keep-alive',
+                        'Host': ' iceportal.de',
+                        'Priority': 'u=0, i',
+                        'Sec-Fetch-Dest': 'document',
+                        'Sec-Fetch-Mode': 'navigate',
+                        'Sec-Fetch-Site': 'none',
+                        'Sec-Fetch-User': '?1',
+                        'Upgrade-Insecure-Requests': '1',
+                        'User-Agent': ' Mozilla/5.0 (X11; Linux x86_64; rv:146.0) Gecko/20100101 Firefox/146.0'
+                    }
+                });
+
+                const data = await res.json();
+
+                const speed = data.speed;
+
+                global_error = undefined;
+                label.text = `ICE: \n ${speed} km/h`;
+                return true
+                // error = 'All fine'
+            }
+            catch (error) {
+                global_error = error.toString();
+                label.text = `${error}`;
+                return false
+            }
+        }
+
+        async function updateRailjet(){
+
+            try {
+
+                const res = await fetch('https://railnet.oebb.at/api/speed')
+                
+                const speed = await res.text()
+                global_error = undefined;
+                label.text = `RailJet: \n ${speed} km/h`;
+                return true
+            }
+            catch(e){
+                global_error = error.toString();
+                label.text = `${error}`;
+                return false
+            }
+
+        }
     }
 
     
