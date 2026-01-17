@@ -27,6 +27,21 @@ import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
+const ICE_HEADERS = {
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    'Accept-Encoding': 'gzip, deflate, br, zstd',
+    'Accept-Language': 'en-GB,en;q=0.5',
+    'Connection': 'keep-alive',
+    'Host': ' iceportal.de',
+    'Priority': 'u=0, i',
+    'Sec-Fetch-Dest': 'document',
+    'Sec-Fetch-Mode': 'navigate',
+    'Sec-Fetch-Site': 'none',
+    'Sec-Fetch-User': '?1',
+    'Upgrade-Insecure-Requests': '1',
+    'User-Agent': ' Mozilla/5.0 (X11; Linux x86_64; rv:146.0) Gecko/20100101 Firefox/146.0'
+}
+
 let global_error = 'All fine'
 
 
@@ -92,29 +107,24 @@ class Indicator extends PanelMenu.Button {
         async function updateICE() {
 
             try {
-                const res = await fetch('https://iceportal.de/api1/rs/status', {
-                    headers: {
-                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                        'Accept-Encoding': 'gzip, deflate, br, zstd',
-                        'Accept-Language': 'en-GB,en;q=0.5',
-                        'Connection': 'keep-alive',
-                        'Host': ' iceportal.de',
-                        'Priority': 'u=0, i',
-                        'Sec-Fetch-Dest': 'document',
-                        'Sec-Fetch-Mode': 'navigate',
-                        'Sec-Fetch-Site': 'none',
-                        'Sec-Fetch-User': '?1',
-                        'Upgrade-Insecure-Requests': '1',
-                        'User-Agent': ' Mozilla/5.0 (X11; Linux x86_64; rv:146.0) Gecko/20100101 Firefox/146.0'
-                    }
-                });
+                const reqSpeed = fetch('https://iceportal.de/api1/rs/status', {headers: ICE_HEADERS});
+                const reqStatus = fetch('https://iceportal.de/api1/rs/tripInfo/trip', {headers: ICE_HEADERS});
 
-                const data = await res.json();
+                const resSpeed = await reqSpeed;
+                const resStatus = await reqStatus;
 
-                const speed = data.speed;
+                const dataSpeed = await resSpeed.json();
+                const dataStatus = await resStatus.json();
+                const speed = dataSpeed.speed;
+                const trainInfo = dataStatus.trip.journeyDisplayValue;
+
+                const nextStop = dataStatus.trip.stops.find(s => s.station.evaNr == dataStatus.trip.stopInfo.actualNext)
+
+                const nextStopTime = new Date(nextStop.timetable.scheduledArrivalTime)
+                const nextStopTimeFormatted = nextStopTime.toLocaleTimeString(undefined, {hour: '2-digit', minute:'2-digit'})
 
                 global_error = undefined;
-                label.text = `ICE: \n ${speed} km/h`;
+                label.text = `${trainInfo} | ${speed} km/h | ${nextStopTimeFormatted} ${nextStop.station.name}`;
                 return true
                 // error = 'All fine'
             }
