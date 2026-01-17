@@ -19,7 +19,8 @@
 import GObject from 'gi://GObject';
 import St from 'gi://St';
 import Soup from "gi://Soup";
-import Clutter from "gi://Clutter"
+import Clutter from "gi://Clutter";
+import Gio from "gi://Gio";
 import { makeFetch } from './gjs-fetch.js';
 
 import {Extension, gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
@@ -32,8 +33,8 @@ let global_error = 'All fine'
 
 const Indicator = GObject.registerClass(
 class Indicator extends PanelMenu.Button {
-    _init() {
-        super._init(0.0, _('My Shiny Indicator'));
+    _init(extensionObject) {
+        super._init(Clutter.ActorAlign.FILL);
 
         // this.add_child(new St.Icon({
         //     icon_name: 'face-smile-symbolic',
@@ -51,8 +52,32 @@ class Indicator extends PanelMenu.Button {
             text: 'starting...',
             y_align: Clutter.ActorAlign.CENTER
         })
+        // attempt to prevent ellipsizes
+        label.get_clutter_text().ellipsize = 0;
 
-        this.add_child(label)
+        const icon = new St.Icon({
+            reactive: true,
+            style_class: 'system-status-icon'
+        })
+
+        const path = extensionObject.path;
+
+        // start off with DB for now
+        icon.gicon = Gio.icon_new_for_string(`${path}` + '/icons' + '/db.svg');
+
+        const box = new St.BoxLayout({
+            vertical: false,
+            clip_to_allocation: true,
+            x_align: Clutter.ActorAlign.START,
+            y_align: Clutter.ActorAlign.CENTER,
+            reactive: true,
+            x_expand: true
+        });
+
+        box.add_child(icon);
+        box.add_child(label);
+
+        this.add_child(box)
 
         let mode = 'disconnected'
 
@@ -115,7 +140,13 @@ class Indicator extends PanelMenu.Button {
                 const speed = data.speed;
 
                 global_error = undefined;
-                label.text = `ICE: ${speed} km/h`;
+                label.text = ` ${speed} km/h`;
+
+                // update icon if changed
+                if(mode != 'ICE'){
+                    icon.gicon = Gio.icon_new_for_string(`${path}` + '/icons' + '/db.svg');
+                }
+
                 return true
                 // error = 'All fine'
             }
@@ -142,7 +173,13 @@ class Indicator extends PanelMenu.Button {
 
                 
                 global_error = undefined;
-                label.text = `${train} | ${speed} km/h | ${nextStop}`;
+                label.text = ` ${train} | ${speed} km/h | ${nextStop}`;
+
+                // update icon if changed
+                if(mode != 'RailJet'){
+                    icon.gicon = Gio.icon_new_for_string(`${path}` + '/icons' + '/oebb.svg');
+                }
+
                 return true
             }
             catch(e){
@@ -159,7 +196,7 @@ class Indicator extends PanelMenu.Button {
 
 export default class IndicatorExampleExtension extends Extension {
     enable() {
-        this._indicator = new Indicator();
+        this._indicator = new Indicator(this);
         Main.panel.addToStatusArea(this.uuid, this._indicator);
     }
 
