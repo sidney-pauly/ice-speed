@@ -75,6 +75,8 @@ class Indicator extends PanelMenu.Button {
             style_class: 'system-status-icon'
         })
 
+        icon.set_icon_size(16);
+
         const path = extensionObject.path;
 
         // start off with DB for now
