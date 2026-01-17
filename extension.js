@@ -19,6 +19,7 @@
 import GObject from 'gi://GObject';
 import St from 'gi://St';
 import Soup from "gi://Soup";
+import Clutter from "gi://Clutter"
 import { makeFetch } from './gjs-fetch.js';
 
 import {Extension, gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
@@ -28,7 +29,6 @@ import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 let global_error = 'All fine'
-
 
 const Indicator = GObject.registerClass(
 class Indicator extends PanelMenu.Button {
@@ -48,7 +48,8 @@ class Indicator extends PanelMenu.Button {
         const fetch = makeFetch(session);
 
         const label = new St.Label({
-            text: '200 km/h'
+            text: 'starting...',
+            y_align: Clutter.ActorAlign.CENTER
         })
 
         this.add_child(label)
@@ -114,7 +115,7 @@ class Indicator extends PanelMenu.Button {
                 const speed = data.speed;
 
                 global_error = undefined;
-                label.text = `ICE: \n ${speed} km/h`;
+                label.text = `ICE: ${speed} km/h`;
                 return true
                 // error = 'All fine'
             }

@@ -1,8 +1,9 @@
 {
   "name": "ice-speed",
-  "description": "Shows the current ice speed when connected to wifionice",
+  "description": "Shows the current train speed when connected to local WiFi onboard ICE and RJ trains",
   "uuid": "ice-speed@sidneypauly.me",
   "shell-version": [
+    "49",
     "48"
   ]
 }
