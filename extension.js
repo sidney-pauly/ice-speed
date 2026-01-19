@@ -50,12 +50,8 @@ const Indicator = GObject.registerClass(
 class Indicator extends PanelMenu.Button {
     _init(extensionObject) {
         super._init(Clutter.ActorAlign.FILL);
-
-        // this.add_child(new St.Icon({
-        //     icon_name: 'face-smile-symbolic',
-        //     style_class: 'system-status-icon',
-        // }));
-
+        const path = extensionObject.path;
+        //const settings = extensionObject.getSettings();
 
         // Create a Soup session
         const session = new Soup.Session();
@@ -63,23 +59,55 @@ class Indicator extends PanelMenu.Button {
         // Create a fetch function 
         const fetch = makeFetch(session);
 
-        const label = new St.Label({
+        const train_label = new St.Label({
+            text: 'starting...',
+            y_align: Clutter.ActorAlign.CENTER
+        })
+        const speed_label = new St.Label({
+            text: 'starting...',
+            y_align: Clutter.ActorAlign.CENTER
+        })
+        const stop_label = new St.Label({
+            text: 'starting...',
+            y_align: Clutter.ActorAlign.CENTER
+        })
+        const stop_time_label = new St.Label({
             text: 'starting...',
             y_align: Clutter.ActorAlign.CENTER
         })
         // attempt to prevent ellipsizes
-        label.get_clutter_text().ellipsize = 0;
+        train_label.get_clutter_text().ellipsize = 0;
+        speed_label.get_clutter_text().ellipsize = 0;
+        //stop_label.get_clutter_text().ellipsize = 0;
+        stop_time_label.get_clutter_text().ellipsize = 0;
 
         const icon = new St.Icon({
             reactive: true,
             style_class: 'system-status-icon'
         })
-
-        const path = extensionObject.path;
-
+        icon.set_icon_size(16);
         // start off with DB for now
         icon.gicon = Gio.icon_new_for_string(`${path}` + '/icons' + '/db.svg');
 
+        const speed_icon = new St.Icon({
+            // icon_name: 'speedometer5-symbolic',
+            style_class: 'system-status-icon',
+        });
+        const stop_icon = new St.Icon({
+            // icon_name: 'arrow3-right-symbolic',
+            style_class: 'system-status-icon',
+        });
+        const stop_time_icon = new St.Icon({
+            icon_name: 'org.gnome.Settings-time-symbolic',
+            style_class: 'system-status-icon',
+        });
+        speed_icon.gicon = Gio.icon_new_for_string(`${path}` + '/icons' + '/speedometer5-symbolic.svg');
+        stop_icon.gicon = Gio.icon_new_for_string(`${path}` + '/icons' + '/arrow3-right-symbolic.svg');
+        stop_time_icon.set_icon_size(16);
+        speed_icon.set_icon_size(16);
+        stop_icon.set_icon_size(16);
+
+        
         const box = new St.BoxLayout({
             vertical: false,
             clip_to_allocation: true,
@@ -88,9 +116,19 @@ class Indicator extends PanelMenu.Button {
             reactive: true,
             x_expand: true
         });
+        box.spacing = 5;
+
+        let test = false;
 
         box.add_child(icon);
-        box.add_child(label);
+        box.add_child(train_label);
+        box.add_child(speed_icon);
+        box.add_child(speed_label);
+        box.add_child(stop_time_icon);
+        box.add_child(stop_time_label);
+        box.add_child(stop_icon);
+        box.add_child(stop_label);
+        test = true;
 
         this.add_child(box)
 
@@ -128,7 +166,20 @@ class Indicator extends PanelMenu.Button {
         item.connect('activate', () => {
             Main.notify(_(`Error: ${global_error}`));
         });
+        let test_item = new PopupMenu.PopupMenuItem(_('Toggle Next Station'));
+        test_item.connect('activate', () => {
+            if (test) {
+                box.remove_child(stop_icon);
+                box.remove_child(stop_label);
+                test = false;
+            } else {
+                box.add_child(stop_icon);
+                box.add_child(stop_label);
+                test = true;
+            };
+        });
         this.menu.addMenuItem(item);
+        this.menu.addMenuItem(test_item);
 
         async function updateICE() {
 
@@ -150,9 +201,10 @@ class Indicator extends PanelMenu.Button {
                 const nextStopTimeFormatted = nextStopTime.toLocaleTimeString(undefined, {hour: '2-digit', minute:'2-digit'})
 
                 global_error = undefined;
-                label.text = ` ${speed} km/h`;
-
-                label.text = `${trainInfo} | ${speed} km/h | ${nextStopTimeFormatted} ${nextStop.station.name}`;
+                train_label.text = `${trainInfo}`;
+                speed_label.text = `${speed} km/h`;
+                stop_label.text = `${nextStop.station.name}`;
+                stop_time_label.text = `${nextStopTimeFormatted}`;
 
                 // update icon if changed
                 if(mode != 'ICE'){
@@ -164,7 +216,7 @@ class Indicator extends PanelMenu.Button {
             }
             catch (error) {
                 global_error = error.toString();
-                label.text = `${error}`;
+                //label.text = `${error}`;
                 return false
             }
         }
@@ -180,12 +232,13 @@ class Indicator extends PanelMenu.Button {
                 const train = `${json.trainType} ${json.lineNumber}`
 
                 const nextStationArrival = (!!json.nextStation.arrival.forecast) ? json.nextStation.arrival.forecast : json.nextStation.arrival.scheduled  
-                const nextStop = `${json.nextStation.name.de} ${nextStationArrival}`
-
-
+                const nextStop = json.nextStation.name.de
                 
                 global_error = undefined;
-                label.text = ` ${train} | ${speed} km/h | ${nextStop}`;
+                train_label.text = `${train}`;
+                speed_label.text = `${speed} km/h`;
+                stop_label.text = `${nextStop}`;
+                stop_time_label.text = `${nextStationArrival}`;
 
                 // update icon if changed
                 if(mode != 'RailJet'){
@@ -196,7 +249,7 @@ class Indicator extends PanelMenu.Button {
             }
             catch(e){
                 global_error = error.toString();
-                label.text = `${error}`;
+                //label.text = `${error}`;
                 return false
             }
 
